@@ -1,246 +1,288 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#0b0b0b">
-  <link rel="manifest" href="manifest.webmanifest">
-  <title>Acker Spurführung PRO</title>
-  <style>
-    :root { --bg:#0b0b0b; --card:#181818; --text:#fff; --muted:#aaa; --good:#39d98a; --warn:#ffd24a; --bad:#ff5c5c; }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    body{min-height:100vh}
-    main{max-width:900px;margin:auto;padding:12px 12px 28px}
-    h1{font-size:22px;margin:4px 0 10px}
-    .card{background:var(--card);border-radius:18px;padding:12px;margin:8px 0}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    button,input{font:inherit}
-    button{border:0;border-radius:12px;padding:13px 10px;font-weight:800;background:#efefef;color:#111;min-height:48px}
-    button.secondary{background:#333;color:#fff}
-    button.danger{background:#5a2424;color:#fff}
-    .row button{flex:1}
-    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
-    input{width:100%;border:1px solid #444;background:#0e0e0e;color:#fff;padding:10px;border-radius:10px;font-size:18px}
-    .bigArrow{font-size:140px;text-align:center;line-height:.85;font-weight:900;margin:0}
-    .bigError{font-size:72px;text-align:center;font-weight:900;line-height:1;margin:2px 0}
-    .hint{font-size:28px;text-align:center;font-weight:800;margin-top:4px}
-    .muted{color:var(--muted);font-size:13px}
-    .pills{display:flex;gap:6px;flex-wrap:wrap}
-    .pill{display:inline-block;background:#2a2a2a;border-radius:999px;padding:6px 9px;font-size:12px}
-    .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
-    .guide{height:110px;position:relative;overflow:hidden;border-radius:14px;background:#101010}
-    .center{position:absolute;left:50%;top:0;bottom:0;width:6px;background:#fff;transform:translateX(-3px)}
-    .tractor{position:absolute;top:58px;width:30px;height:30px;border-radius:50%;background:var(--warn);transform:translateX(-15px)}
-    .labelTop{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:12px;color:#bbb}
-    .settingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .compact{padding:10px}
-    @media (orientation:landscape) {
-      main{max-width:none;padding:8px}
-      h1{display:none}
-      .setupCard{display:none}
-      .bigArrow{font-size:118px}
-      .bigError{font-size:64px}
-      .hint{font-size:25px}
-      .driveCard{margin-top:0}
-      .guide{height:90px}
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0b0b">
+<title>Acker Spurführung V4</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#0b0b0b;--card:#171717;--muted:#a5a5a5;--ok:#39d98a;--warn:#ffd24a;--bad:#ff5c5c}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:auto;padding:10px} h1{font-size:22px;margin:5px 0 8px}
+.card{background:var(--card);border-radius:16px;padding:12px;margin:8px 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+button,input,select{font:inherit}button{border:0;border-radius:12px;padding:13px 9px;font-weight:800;min-height:46px}
+button.dark{background:#333;color:#fff}button.red{background:#6e2626;color:#fff}button.green{background:#1f7a49;color:#fff}button.blue{background:#214f7a;color:#fff}
+input,select{width:100%;background:#0e0e0e;color:#fff;border:1px solid #444;border-radius:10px;padding:10px;font-size:18px}
+label{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+.arrow{text-align:center;font-size:92px;font-weight:900;line-height:.85}.err{text-align:center;font-size:54px;font-weight:900}
+.hint{text-align:center;font-size:23px;font-weight:800}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.info{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.pill{background:#292929;border-radius:99px;padding:6px 9px;font-size:12px}
+#map{height:440px;border-radius:14px;overflow:hidden;background:#1f2b1f}
+small{color:var(--muted)}.statusbar{font-size:13px;padding:7px 9px;border-radius:10px;background:#262626;margin-top:8px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#ccc;margin-top:7px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+@media(orientation:landscape){
+  h1,.setup{display:none} #map{height:60vh}.arrow{font-size:62px}.err{font-size:42px}.hint{font-size:18px}
+}
+</style>
 </head>
 <body>
 <main>
-  <h1>🚜 Acker Spurführung PRO</h1>
+<h1>🚜 Acker Spurführung V4</h1>
 
-  <div class="card setupCard">
-    <div class="settingsGrid">
-      <div>
-        <label>Arbeitsbreite</label>
-        <input id="width" type="number" step="0.1" value="12.5" readonly>
-      </div>
-      <div>
-        <label>Toleranz / Warnbereich (m)</label>
-        <input id="tol" type="number" step="0.05" min="0.05" value="0.35">
-      </div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="start">GPS starten</button>
-      <button id="setA" class="secondary">A setzen</button>
-      <button id="setB" class="secondary">B setzen</button>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="swap" class="secondary">Richtung drehen</button>
-      <button id="sound" class="secondary">Ton: EIN</button>
-      <button id="reset" class="danger">AB löschen</button>
-    </div>
+<div class="card setup">
+  <div class="row">
+    <div><label>Arbeitsbreite</label><input id="width" value="12.5" readonly></div>
+    <div><label>Toleranz (m)</label><input id="tol" type="number" step="0.05" value="0.35"></div>
+    <div><label>Vorgewende (m)</label><input id="headland" type="number" step="1" value="24"></div>
+    <div><label>Feldname</label><input id="fieldName" placeholder="z.B. Jägersacker"></div>
   </div>
-
-  <div class="card driveCard">
-    <div id="arrow" class="bigArrow">•</div>
-    <div id="error" class="bigError">–</div>
-    <div id="hint" class="hint">AB-Linie setzen</div>
-
-    <div class="guide" style="margin-top:10px">
-      <div class="center"></div>
-      <div class="labelTop">Sollspur</div>
-      <div id="tractor" class="tractor" style="left:50%"></div>
-    </div>
-
-    <div class="pills" style="margin-top:9px">
-      <span id="status" class="pill">GPS: aus</span>
-      <span id="acc" class="pill">Genauigkeit: –</span>
-      <span id="speed" class="pill">Tempo: –</span>
-      <span id="line" class="pill">Spur: –</span>
-    </div>
+  <div class="row" style="margin-top:8px">
+    <button id="gps">GPS starten</button>
+    <button id="a" class="dark">A setzen</button>
+    <button id="b" class="dark">B setzen</button>
+    <button id="mapMode" class="blue">Satellit</button>
   </div>
-
-  <div class="card compact setupCard">
-    <strong>Benutzung</strong>
-    <div class="muted">A am Anfang der Fahrgasse setzen, 20–50 m gerade fahren, B setzen. Danach zeigt die App die nächste 12,5-m-Spur. Im Querformat ist nur die große Fahranzeige sichtbar.</div>
+  <div class="row" style="margin-top:8px">
+    <button id="spray" class="green">Spritzen: AUS</button>
+    <button id="boundary" class="blue">Feldgrenze: AUS</button>
+    <button id="saveField" class="dark">Feld speichern</button>
+    <button id="loadField" class="dark">Feld laden</button>
+    <button id="reset" class="red">Neu</button>
   </div>
+</div>
+
+<div class="card">
+  <div id="arrow" class="arrow">•</div>
+  <div id="err" class="err">–</div>
+  <div id="hint" class="hint">GPS starten und AB-Linie setzen</div>
+  <div class="info">
+    <span id="gpsState" class="pill">GPS: aus</span>
+    <span id="acc" class="pill">Genauigkeit: –</span>
+    <span id="speed" class="pill">Tempo: –</span>
+    <span id="line" class="pill">Spur: –</span>
+    <span id="area" class="pill">Bearbeitet: 0.00 ha</span>
+    <span id="fieldArea" class="pill">Feld: –</span>
+  </div>
+  <div id="quality" class="statusbar">Hinweis: Für präzise Spritzarbeit ist externes GNSS/RTK empfohlen.</div>
+</div>
+
+<div class="card">
+  <div id="map"></div>
+  <div class="legend">
+    <span><i class="dot" style="background:#fff"></i>AB-Spur</span>
+    <span><i class="dot" style="background:#7f7f7f"></i>12,5-m-Spuren</span>
+    <span><i class="dot" style="background:#39d98a"></i>behandelt</span>
+    <span><i class="dot" style="background:#2f89ff"></i>Feldgrenze</span>
+    <span><i class="dot" style="background:#ffd24a"></i>Position</span>
+  </div>
+</div>
+
+<div class="card setup">
+<small>
+V4: Karten-/Satellitenansicht, 12,5-m-Spuren, Flächenaufzeichnung, Feldgrenze per GPS,
+Feldfläche, einfaches Vorgewende, Feld speichern/laden und GPS-Qualitätswarnung.
+Kartenkacheln benötigen Internet.
+</small>
+</div>
 </main>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-let watchId=null, pos=null, A=null, B=null, soundOn=true, lastBeep=0;
-let audioCtx=null;
-const $=id=>document.getElementById(id);
-const R=6378137;
+const $=id=>document.getElementById(id),R=6378137;
+let P=null,A=null,B=null,watchId=null,spraying=false,lastSprayPoint=null;
+let boundaryRecording=false,boundaryPts=[];
+let map=null,posMarker=null,trackLayers=[],coverageLayers=[],boundaryLayer=null,headlandLayer=null;
+let osmLayer=null,satLayer=null,satellite=false,coverageArea=0;
 
-function ensureAudio(){
-  if(!audioCtx){
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+function initMap(){
+  map=L.map('map',{zoomControl:true}).setView([50.5,10.8],15);
+  osmLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:20,attribution:'© OpenStreetMap'
+  });
+  satLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:20,attribution:'Tiles © Esri'
+  });
+  osmLayer.addTo(map);
+}
+function toXY(p,o){
+  const lat0=o.lat*Math.PI/180;
+  return {x:(p.lon-o.lon)*Math.PI/180*R*Math.cos(lat0),y:(p.lat-o.lat)*Math.PI/180*R};
+}
+function toLL(x,y,o){
+  return {lat:o.lat+(y/R)*180/Math.PI,lon:o.lon+(x/(R*Math.cos(o.lat*Math.PI/180)))*180/Math.PI};
+}
+function lineData(){
+  if(!A||!B)return null;
+  const b=toXY(B,A),len=Math.hypot(b.x,b.y); if(len<2)return null;
+  const ux=b.x/len,uy=b.y/len,nx=-uy,ny=ux; return {len,ux,uy,nx,ny};
+}
+function crossTrack(p){
+  const d=lineData(); if(!d)return null;
+  const q=toXY(p,A);
+  return {cross:q.x*d.nx+q.y*d.ny,along:q.x*d.ux+q.y*d.uy,...d};
+}
+function drawTracks(){
+  trackLayers.forEach(x=>map.removeLayer(x));trackLayers=[];
+  if(!A||!B)return;
+  const d=lineData(); if(!d)return;
+  const halfLen=1500,w=12.5;
+  for(let k=-18;k<=18;k++){
+    const ox=d.nx*k*w,oy=d.ny*k*w;
+    const p1=toLL(-d.ux*halfLen+ox,-d.uy*halfLen+oy,A);
+    const p2=toLL(d.ux*halfLen+ox,d.uy*halfLen+oy,A);
+    const lyr=L.polyline([[p1.lat,p1.lon],[p2.lat,p2.lon]],{
+      weight:k===0?5:2,opacity:k===0?1:.72,color:k===0?'#fff':'#7f7f7f',dashArray:k===0?null:'7,7'
+    }).addTo(map);
+    lyr.bindTooltip('Spur '+(k>=0?'+':'')+k);
+    trackLayers.push(lyr);
   }
 }
-function beep(freq=800,dur=0.09){
-  if(!soundOn) return;
-  try{
-    ensureAudio();
-    const now=audioCtx.currentTime;
-    const o=audioCtx.createOscillator();
-    const g=audioCtx.createGain();
-    o.frequency.value=freq;
-    g.gain.setValueAtTime(0.12,now);
-    g.gain.exponentialRampToValueAtTime(0.001,now+dur);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(now); o.stop(now+dur);
-  }catch(e){}
+function updatePosition(){
+  if(!P)return;
+  if(!posMarker)posMarker=L.circleMarker([P.lat,P.lon],{radius:8,weight:3,color:'#111',fillColor:'#ffd24a',fillOpacity:1}).addTo(map);
+  else posMarker.setLatLng([P.lat,P.lon]);
 }
-function save(){
-  localStorage.setItem('ackerGuidePro',JSON.stringify({A,B,tol:$('tol').value,soundOn}));
+function distM(p1,p2){
+  const lat0=((p1.lat+p2.lat)/2)*Math.PI/180;
+  const dx=(p2.lon-p1.lon)*Math.PI/180*R*Math.cos(lat0);
+  const dy=(p2.lat-p1.lat)*Math.PI/180*R;
+  return Math.hypot(dx,dy);
 }
-function load(){
-  try{
-    const d=JSON.parse(localStorage.getItem('ackerGuidePro')||'{}');
-    A=d.A||null; B=d.B||null;
-    if(d.tol) $('tol').value=d.tol;
-    if(typeof d.soundOn==='boolean') soundOn=d.soundOn;
-  }catch(e){}
-  $('sound').textContent='Ton: '+(soundOn?'EIN':'AUS');
+function addCoverage(p1,p2){
+  if(!A||!B)return;
+  const d=lineData(); if(!d)return;
+  const q1=toXY(p1,A),q2=toXY(p2,A),half=6.25;
+  const cs=[
+    {x:q1.x+d.nx*half,y:q1.y+d.ny*half},
+    {x:q2.x+d.nx*half,y:q2.y+d.ny*half},
+    {x:q2.x-d.nx*half,y:q2.y-d.ny*half},
+    {x:q1.x-d.nx*half,y:q1.y-d.ny*half}
+  ].map(v=>toLL(v.x,v.y,A));
+  const poly=L.polygon(cs.map(c=>[c.lat,c.lon]),{color:'#39d98a',weight:0,fillColor:'#39d98a',fillOpacity:.32}).addTo(map);
+  coverageLayers.push(poly);
+  coverageArea+=distM(p1,p2)*12.5;
+  $('area').textContent='Bearbeitet: '+(coverageArea/10000).toFixed(2)+' ha';
 }
-function toXY(p, origin){
-  const lat0=origin.lat*Math.PI/180;
-  return {
-    x:(p.lon-origin.lon)*Math.PI/180*R*Math.cos(lat0),
-    y:(p.lat-origin.lat)*Math.PI/180*R
-  };
+function polygonArea(points){
+  if(points.length<3)return 0;
+  const o=points[0],xy=points.map(p=>toXY(p,o)); let s=0;
+  for(let i=0;i<xy.length;i++){let j=(i+1)%xy.length;s+=xy[i].x*xy[j].y-xy[j].x*xy[i].y}
+  return Math.abs(s)/2;
 }
-function calc(P,A0,B0){
-  const b=toXY(B0,A0), p=toXY(P,A0);
-  const len=Math.hypot(b.x,b.y);
-  if(len<2) return null;
-  const ux=b.x/len, uy=b.y/len;
-  const nx=-uy, ny=ux;
-  return {cross:p.x*nx+p.y*ny, along:p.x*ux+p.y*uy};
-}
-function setState(cls,arrow,hint){
-  $('arrow').className='bigArrow '+cls;
-  $('error').className='bigError '+cls;
-  $('arrow').textContent=arrow;
-  $('hint').textContent=hint;
+function redrawBoundary(){
+  if(boundaryLayer)map.removeLayer(boundaryLayer);
+  if(headlandLayer)map.removeLayer(headlandLayer);
+  boundaryLayer=headlandLayer=null;
+  if(boundaryPts.length<2)return;
+  boundaryLayer=L.polyline(boundaryPts.map(p=>[p.lat,p.lon]),{color:'#2f89ff',weight:4}).addTo(map);
+  if(boundaryPts.length>=3){
+    const area=polygonArea(boundaryPts);
+    $('fieldArea').textContent='Feld: '+(area/10000).toFixed(2)+' ha';
+    // simple visual headland: same polygon with translucent border; not a true geometric buffer
+    headlandLayer=L.polygon(boundaryPts.map(p=>[p.lat,p.lon]),{
+      color:'#ff9f1a',weight:Math.max(2,Math.min(12,parseFloat($('headland').value)||24)/4),
+      fill:false,opacity:.65
+    }).addTo(map);
+  }
 }
 function update(){
-  if(!pos){
-    $('status').textContent='GPS: aus';
-    return;
-  }
-  $('status').textContent='GPS: aktiv';
-  $('acc').textContent='Genauigkeit: ±'+Math.round(pos.acc||0)+' m';
-  $('speed').textContent='Tempo: '+((pos.speed||0)*3.6).toFixed(1)+' km/h';
+  if(!P)return;
+  $('gpsState').textContent='GPS: aktiv';$('acc').textContent='Genauigkeit: ±'+Math.round(P.acc||0)+' m';
+  $('speed').textContent='Tempo: '+((P.speed||0)*3.6).toFixed(1)+' km/h';updatePosition();
 
-  if(!A || !B){
-    $('error').textContent='–';
-    $('tractor').style.left='50%';
-    if(!A) setState('','•','Punkt A setzen');
-    else setState('warn','↑','Gerade fahren, dann B setzen');
-    return;
-  }
+  if(P.acc>3)$('quality').textContent='⚠ GPS ±'+Math.round(P.acc)+' m – für exakte Spurführung zu ungenau.';
+  else if(P.acc>1)$('quality').textContent='GPS brauchbar zum Testen – RTK wäre für Spritzen deutlich genauer.';
+  else $('quality').textContent='GPS-Qualität gut.';
 
-  const c=calc(pos,A,B);
-  if(!c) return;
-
-  const w=12.5;
-  const tol=parseFloat($('tol').value)||0.35;
-  const k=Math.round(c.cross/w);
-  const target=k*w;
-  const err=c.cross-target;
-  const abs=Math.abs(err);
-  const cm=Math.round(abs*100);
-
-  $('line').textContent='Spur: '+(k>=0?'+':'')+k;
-  $('error').textContent=cm+' cm';
-
-  const maxDisplay=2.0;
-  const pct=50 + Math.max(-maxDisplay,Math.min(maxDisplay,err))/maxDisplay*44;
-  $('tractor').style.left=pct+'%';
-
-  if(abs<=tol){
-    setState('ok','↑','SPUR HALTEN');
-  }else if(abs<=0.9){
-    setState('warn', err>0?'→':'←', err>0?'RECHTS KORRIGIEREN':'LINKS KORRIGIEREN');
-  }else{
-    setState('bad', err>0?'→':'←', err>0?'STARK RECHTS':'STARK LINKS');
+  if(boundaryRecording){
+    const np={lat:P.lat,lon:P.lon};
+    if(!boundaryPts.length || distM(boundaryPts[boundaryPts.length-1],np)>=2){
+      boundaryPts.push(np);redrawBoundary();
+    }
   }
 
-  const now=Date.now();
-  if(soundOn && abs>tol && now-lastBeep>900){
-    beep(abs>0.9?1050:750,0.08);
-    lastBeep=now;
+  if(!A||!B){$('hint').textContent=!A?'Punkt A setzen':'20–50 m gerade fahren und B setzen';return;}
+  const c=crossTrack(P); if(!c)return;
+  const k=Math.round(c.cross/12.5),err=c.cross-k*12.5,abs=Math.abs(err),tol=parseFloat($('tol').value)||.35;
+  $('line').textContent='Spur: '+(k>=0?'+':'')+k;$('err').textContent=Math.round(abs*100)+' cm';
+  const cls=abs<=tol?'ok':abs<=.9?'warn':'bad';$('arrow').className='arrow '+cls;$('err').className='err '+cls;
+  $('arrow').textContent=abs<=tol?'↑':err>0?'→':'←';
+  $('hint').textContent=abs<=tol?'SPUR HALTEN':err>0?'RECHTS KORRIGIEREN':'LINKS KORRIGIEREN';
+
+  if(spraying){
+    const np={lat:P.lat,lon:P.lon};
+    if(lastSprayPoint && distM(lastSprayPoint,np)>=1){addCoverage(lastSprayPoint,np);lastSprayPoint=np}
+    else if(!lastSprayPoint)lastSprayPoint=np;
   }
 }
 function setPoint(which){
-  if(!pos){alert('Bitte zuerst GPS starten.');return;}
-  ensureAudio();
-  const p={lat:pos.lat,lon:pos.lon};
-  if(which==='A') A=p; else B=p;
-  save(); update();
+  if(!P)return alert('Bitte zuerst GPS starten.');
+  const p={lat:P.lat,lon:P.lon}; if(which==='A')A=p;else B=p;
+  drawTracks();saveCurrent();update();map.setView([P.lat,P.lon],18);
 }
-$('start').onclick=async()=>{
-  ensureAudio();
-  if(!navigator.geolocation){alert('GPS wird nicht unterstützt.');return;}
-  try{ if(navigator.wakeLock) await navigator.wakeLock.request('screen'); }catch(e){}
-  $('status').textContent='GPS: suche…';
-  if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+function saveCurrent(){
+  localStorage.setItem('guideV4current',JSON.stringify({A,B,boundaryPts,fieldName:$('fieldName').value,headland:$('headland').value}));
+}
+function saveField(){
+  const name=$('fieldName').value.trim(); if(!name)return alert('Bitte Feldname eingeben.');
+  if(!A||!B)return alert('Bitte zuerst A und B setzen.');
+  const all=JSON.parse(localStorage.getItem('guideV4fields')||'{}');
+  all[name]={A,B,boundaryPts,headland:$('headland').value};localStorage.setItem('guideV4fields',JSON.stringify(all));
+  saveCurrent();alert('Feld "'+name+'" gespeichert.');
+}
+function loadField(){
+  const all=JSON.parse(localStorage.getItem('guideV4fields')||'{}'),names=Object.keys(all);
+  if(!names.length)return alert('Noch keine Felder gespeichert.');
+  const name=prompt('Feldname eingeben:\n'+names.join('\n'),names[0]); if(!name||!all[name])return;
+  A=all[name].A;B=all[name].B;boundaryPts=all[name].boundaryPts||[];$('fieldName').value=name;$('headland').value=all[name].headland||24;
+  drawTracks();redrawBoundary();saveCurrent();
+  const pts=[A,B,...boundaryPts].filter(Boolean); if(pts.length)map.fitBounds(pts.map(p=>[p.lat,p.lon]),{padding:[50,50]});
+}
+function clearCoverage(){
+  coverageLayers.forEach(x=>map.removeLayer(x));coverageLayers=[];coverageArea=0;$('area').textContent='Bearbeitet: 0.00 ha';
+}
+$('gps').onclick=()=>{
+  if(!navigator.geolocation)return alert('GPS wird nicht unterstützt.');
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
   watchId=navigator.geolocation.watchPosition(g=>{
-    pos={
-      lat:g.coords.latitude,
-      lon:g.coords.longitude,
-      acc:g.coords.accuracy,
-      speed:g.coords.speed||0
-    };
-    update();
-  },e=>{
-    $('status').textContent='GPS-Fehler';
-    $('hint').textContent=e.message;
-  },{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+    P={lat:g.coords.latitude,lon:g.coords.longitude,acc:g.coords.accuracy,speed:g.coords.speed||0};
+    if(!posMarker)map.setView([P.lat,P.lon],18);update();
+  },e=>alert('GPS-Fehler: '+e.message),{enableHighAccuracy:true,maximumAge:0,timeout:15000});
 };
-$('setA').onclick=()=>setPoint('A');
-$('setB').onclick=()=>setPoint('B');
-$('swap').onclick=()=>{ if(A&&B){const t=A;A=B;B=t;save();update();} };
-$('sound').onclick=()=>{soundOn=!soundOn;ensureAudio();$('sound').textContent='Ton: '+(soundOn?'EIN':'AUS');save();};
-$('reset').onclick=()=>{A=null;B=null;save();update();};
-$('tol').onchange=()=>{save();update();};
-
-load(); update();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+$('a').onclick=()=>setPoint('A');$('b').onclick=()=>setPoint('B');
+$('spray').onclick=()=>{spraying=!spraying;lastSprayPoint=null;$('spray').textContent='Spritzen: '+(spraying?'EIN':'AUS');$('spray').className=spraying?'red':'green';};
+$('boundary').onclick=()=>{
+  boundaryRecording=!boundaryRecording;
+  if(boundaryRecording && !boundaryPts.length && P)boundaryPts.push({lat:P.lat,lon:P.lon});
+  $('boundary').textContent='Feldgrenze: '+(boundaryRecording?'EIN':'AUS');
+  $('boundary').className=boundaryRecording?'red':'blue';
+  if(!boundaryRecording){redrawBoundary();saveCurrent();}
+};
+$('mapMode').onclick=()=>{
+  satellite=!satellite;
+  if(satellite){map.removeLayer(osmLayer);satLayer.addTo(map);$('mapMode').textContent='Karte'}
+  else{map.removeLayer(satLayer);osmLayer.addTo(map);$('mapMode').textContent='Satellit'}
+};
+$('saveField').onclick=saveField;$('loadField').onclick=loadField;
+$('headland').onchange=()=>{redrawBoundary();saveCurrent();}
+$('reset').onclick=()=>{
+  if(!confirm('Aktuelle AB-Linie, Feldgrenze und Flächenaufzeichnung löschen?'))return;
+  A=B=null;boundaryPts=[];boundaryRecording=false;spraying=false;lastSprayPoint=null;
+  trackLayers.forEach(x=>map.removeLayer(x));trackLayers=[];if(boundaryLayer)map.removeLayer(boundaryLayer);if(headlandLayer)map.removeLayer(headlandLayer);
+  boundaryLayer=headlandLayer=null;clearCoverage();$('fieldArea').textContent='Feld: –';
+  $('spray').textContent='Spritzen: AUS';$('spray').className='green';$('boundary').textContent='Feldgrenze: AUS';$('boundary').className='blue';
+  $('err').textContent='–';$('hint').textContent='GPS starten und AB-Linie setzen';$('line').textContent='Spur: –';saveCurrent();
+};
+initMap();
+try{
+  const d=JSON.parse(localStorage.getItem('guideV4current')||'{}');
+  A=d.A||null;B=d.B||null;boundaryPts=d.boundaryPts||[];$('fieldName').value=d.fieldName||'';$('headland').value=d.headland||24;
+  if(A&&B)drawTracks();if(boundaryPts.length)redrawBoundary();
+  const pts=[A,B,...boundaryPts].filter(Boolean);if(pts.length)map.fitBounds(pts.map(p=>[p.lat,p.lon]),{padding:[50,50]});
+}catch(e){}
 </script>
 </body>
 </html>

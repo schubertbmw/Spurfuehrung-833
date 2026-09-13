@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#0b0b0b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Acker Spurführung PRO</title>
+  <style>
+    :root { --bg:#0b0b0b; --card:#181818; --text:#fff; --muted:#aaa; --good:#39d98a; --warn:#ffd24a; --bad:#ff5c5c; }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{min-height:100vh}
+    main{max-width:900px;margin:auto;padding:12px 12px 28px}
+    h1{font-size:22px;margin:4px 0 10px}
+    .card{background:var(--card);border-radius:18px;padding:12px;margin:8px 0}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    button,input{font:inherit}
+    button{border:0;border-radius:12px;padding:13px 10px;font-weight:800;background:#efefef;color:#111;min-height:48px}
+    button.secondary{background:#333;color:#fff}
+    button.danger{background:#5a2424;color:#fff}
+    .row button{flex:1}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input{width:100%;border:1px solid #444;background:#0e0e0e;color:#fff;padding:10px;border-radius:10px;font-size:18px}
+    .bigArrow{font-size:140px;text-align:center;line-height:.85;font-weight:900;margin:0}
+    .bigError{font-size:72px;text-align:center;font-weight:900;line-height:1;margin:2px 0}
+    .hint{font-size:28px;text-align:center;font-weight:800;margin-top:4px}
+    .muted{color:var(--muted);font-size:13px}
+    .pills{display:flex;gap:6px;flex-wrap:wrap}
+    .pill{display:inline-block;background:#2a2a2a;border-radius:999px;padding:6px 9px;font-size:12px}
+    .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+    .guide{height:110px;position:relative;overflow:hidden;border-radius:14px;background:#101010}
+    .center{position:absolute;left:50%;top:0;bottom:0;width:6px;background:#fff;transform:translateX(-3px)}
+    .tractor{position:absolute;top:58px;width:30px;height:30px;border-radius:50%;background:var(--warn);transform:translateX(-15px)}
+    .labelTop{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:12px;color:#bbb}
+    .settingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .compact{padding:10px}
+    @media (orientation:landscape) {
+      main{max-width:none;padding:8px}
+      h1{display:none}
+      .setupCard{display:none}
+      .bigArrow{font-size:118px}
+      .bigError{font-size:64px}
+      .hint{font-size:25px}
+      .driveCard{margin-top:0}
+      .guide{height:90px}
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>🚜 Acker Spurführung PRO</h1>
+
+  <div class="card setupCard">
+    <div class="settingsGrid">
+      <div>
+        <label>Arbeitsbreite</label>
+        <input id="width" type="number" step="0.1" value="12.5" readonly>
+      </div>
+      <div>
+        <label>Toleranz / Warnbereich (m)</label>
+        <input id="tol" type="number" step="0.05" min="0.05" value="0.35">
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="start">GPS starten</button>
+      <button id="setA" class="secondary">A setzen</button>
+      <button id="setB" class="secondary">B setzen</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="swap" class="secondary">Richtung drehen</button>
+      <button id="sound" class="secondary">Ton: EIN</button>
+      <button id="reset" class="danger">AB löschen</button>
+    </div>
+  </div>
+
+  <div class="card driveCard">
+    <div id="arrow" class="bigArrow">•</div>
+    <div id="error" class="bigError">–</div>
+    <div id="hint" class="hint">AB-Linie setzen</div>
+
+    <div class="guide" style="margin-top:10px">
+      <div class="center"></div>
+      <div class="labelTop">Sollspur</div>
+      <div id="tractor" class="tractor" style="left:50%"></div>
+    </div>
+
+    <div class="pills" style="margin-top:9px">
+      <span id="status" class="pill">GPS: aus</span>
+      <span id="acc" class="pill">Genauigkeit: –</span>
+      <span id="speed" class="pill">Tempo: –</span>
+      <span id="line" class="pill">Spur: –</span>
+    </div>
+  </div>
+
+  <div class="card compact setupCard">
+    <strong>Benutzung</strong>
+    <div class="muted">A am Anfang der Fahrgasse setzen, 20–50 m gerade fahren, B setzen. Danach zeigt die App die nächste 12,5-m-Spur. Im Querformat ist nur die große Fahranzeige sichtbar.</div>
+  </div>
+</main>
+
+<script>
+let watchId=null, pos=null, A=null, B=null, soundOn=true, lastBeep=0;
+let audioCtx=null;
+const $=id=>document.getElementById(id);
+const R=6378137;
+
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  }
+}
+function beep(freq=800,dur=0.09){
+  if(!soundOn) return;
+  try{
+    ensureAudio();
+    const now=audioCtx.currentTime;
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.frequency.value=freq;
+    g.gain.setValueAtTime(0.12,now);
+    g.gain.exponentialRampToValueAtTime(0.001,now+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(now); o.stop(now+dur);
+  }catch(e){}
+}
+function save(){
+  localStorage.setItem('ackerGuidePro',JSON.stringify({A,B,tol:$('tol').value,soundOn}));
+}
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem('ackerGuidePro')||'{}');
+    A=d.A||null; B=d.B||null;
+    if(d.tol) $('tol').value=d.tol;
+    if(typeof d.soundOn==='boolean') soundOn=d.soundOn;
+  }catch(e){}
+  $('sound').textContent='Ton: '+(soundOn?'EIN':'AUS');
+}
+function toXY(p, origin){
+  const lat0=origin.lat*Math.PI/180;
+  return {
+    x:(p.lon-origin.lon)*Math.PI/180*R*Math.cos(lat0),
+    y:(p.lat-origin.lat)*Math.PI/180*R
+  };
+}
+function calc(P,A0,B0){
+  const b=toXY(B0,A0), p=toXY(P,A0);
+  const len=Math.hypot(b.x,b.y);
+  if(len<2) return null;
+  const ux=b.x/len, uy=b.y/len;
+  const nx=-uy, ny=ux;
+  return {cross:p.x*nx+p.y*ny, along:p.x*ux+p.y*uy};
+}
+function setState(cls,arrow,hint){
+  $('arrow').className='bigArrow '+cls;
+  $('error').className='bigError '+cls;
+  $('arrow').textContent=arrow;
+  $('hint').textContent=hint;
+}
+function update(){
+  if(!pos){
+    $('status').textContent='GPS: aus';
+    return;
+  }
+  $('status').textContent='GPS: aktiv';
+  $('acc').textContent='Genauigkeit: ±'+Math.round(pos.acc||0)+' m';
+  $('speed').textContent='Tempo: '+((pos.speed||0)*3.6).toFixed(1)+' km/h';
+
+  if(!A || !B){
+    $('error').textContent='–';
+    $('tractor').style.left='50%';
+    if(!A) setState('','•','Punkt A setzen');
+    else setState('warn','↑','Gerade fahren, dann B setzen');
+    return;
+  }
+
+  const c=calc(pos,A,B);
+  if(!c) return;
+
+  const w=12.5;
+  const tol=parseFloat($('tol').value)||0.35;
+  const k=Math.round(c.cross/w);
+  const target=k*w;
+  const err=c.cross-target;
+  const abs=Math.abs(err);
+  const cm=Math.round(abs*100);
+
+  $('line').textContent='Spur: '+(k>=0?'+':'')+k;
+  $('error').textContent=cm+' cm';
+
+  const maxDisplay=2.0;
+  const pct=50 + Math.max(-maxDisplay,Math.min(maxDisplay,err))/maxDisplay*44;
+  $('tractor').style.left=pct+'%';
+
+  if(abs<=tol){
+    setState('ok','↑','SPUR HALTEN');
+  }else if(abs<=0.9){
+    setState('warn', err>0?'→':'←', err>0?'RECHTS KORRIGIEREN':'LINKS KORRIGIEREN');
+  }else{
+    setState('bad', err>0?'→':'←', err>0?'STARK RECHTS':'STARK LINKS');
+  }
+
+  const now=Date.now();
+  if(soundOn && abs>tol && now-lastBeep>900){
+    beep(abs>0.9?1050:750,0.08);
+    lastBeep=now;
+  }
+}
+function setPoint(which){
+  if(!pos){alert('Bitte zuerst GPS starten.');return;}
+  ensureAudio();
+  const p={lat:pos.lat,lon:pos.lon};
+  if(which==='A') A=p; else B=p;
+  save(); update();
+}
+$('start').onclick=async()=>{
+  ensureAudio();
+  if(!navigator.geolocation){alert('GPS wird nicht unterstützt.');return;}
+  try{ if(navigator.wakeLock) await navigator.wakeLock.request('screen'); }catch(e){}
+  $('status').textContent='GPS: suche…';
+  if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(g=>{
+    pos={
+      lat:g.coords.latitude,
+      lon:g.coords.longitude,
+      acc:g.coords.accuracy,
+      speed:g.coords.speed||0
+    };
+    update();
+  },e=>{
+    $('status').textContent='GPS-Fehler';
+    $('hint').textContent=e.message;
+  },{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+};
+$('setA').onclick=()=>setPoint('A');
+$('setB').onclick=()=>setPoint('B');
+$('swap').onclick=()=>{ if(A&&B){const t=A;A=B;B=t;save();update();} };
+$('sound').onclick=()=>{soundOn=!soundOn;ensureAudio();$('sound').textContent='Ton: '+(soundOn?'EIN':'AUS');save();};
+$('reset').onclick=()=>{A=null;B=null;save();update();};
+$('tol').onchange=()=>{save();update();};
+
+load(); update();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>

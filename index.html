@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0b0b">
-<title>Acker Spurführung V4</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Acker Spurführung V4.1</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#0b0b0b;--card:#171717;--muted:#a5a5a5;--ok:#39d98a;--warn:#ffd24a;--bad:#ff5c5c}
@@ -27,10 +30,29 @@ small{color:var(--muted)}.statusbar{font-size:13px;padding:7px 9px;border-radius
   h1,.setup{display:none} #map{height:60vh}.arrow{font-size:62px}.err{font-size:42px}.hint{font-size:18px}
 }
 </style>
+
+<script>
+(async function(){
+  try{
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) { await reg.unregister(); }
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const key of keys) { await caches.delete(key); }
+    }
+    sessionStorage.setItem('spurfuehrung_v41_cleanup','done');
+  }catch(e){
+    console.log('Cache cleanup:', e);
+  }
+})();
+</script>
+
 </head>
 <body>
 <main>
-<h1>🚜 Acker Spurführung V4</h1>
+<h1>🚜 Acker Spurführung V4.1</h1>
 
 <div class="card setup">
   <div class="row">
@@ -59,7 +81,7 @@ small{color:var(--muted)}.statusbar{font-size:13px;padding:7px 9px;border-radius
   <div id="err" class="err">–</div>
   <div id="hint" class="hint">GPS starten und AB-Linie setzen</div>
   <div class="info">
-    <span id="gpsState" class="pill">GPS: aus</span>
+    <span class="pill">Version 4.1</span><span id="gpsState" class="pill">GPS: aus</span>
     <span id="acc" class="pill">Genauigkeit: –</span>
     <span id="speed" class="pill">Tempo: –</span>
     <span id="line" class="pill">Spur: –</span>
